@@ -1,4 +1,0 @@
-
-module RightScaleHelper
-    
-end

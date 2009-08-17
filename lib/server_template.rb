@@ -4,6 +4,13 @@
 class ServerTemplate
   attr_accessor :updated_at, :name, :description, :href, :aki_image, :ari_image, :ec2_image, :instance_type, :ec2_user_data
   
+  def initialize(name, description, href, updated_at)
+    self.name = name
+    self.description = description
+    self.href = href
+    self.updated_at = updated_at
+  end
+
   def create(name, description, aki_image, ari_image, ec2_image, instance_type, ec2_user_data)
     server_template = ServerTemplate.new
     api = RightScaleApi.new
@@ -26,10 +33,14 @@ class ServerTemplate
   end
   def update
     api = RightScaleApi.new
-    attribs = api.get(self.href + ".js")
-    self.name = attribs["nickname"]
-    self.description = attribs["description"]
-    self.updated_at = attribs["updated-at"]
+    begin
+      attribs = api.get(self.href + ".js")
+      self.name = attribs["nickname"]
+      self.description = attribs["description"]
+      self.updated_at = attribs["updated-at"]
+    rescue
+      puts "Error retrieving #{self.href}"
+    end
   end
   def save
     api = RightScaleApi.new

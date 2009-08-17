@@ -49,7 +49,11 @@ class RightScaleApi
     get("server_arrays.js")
   end
   def server_templates
-    get("server_templates.js")
+    server_templates = []
+    get("server_templates.js").each do |template|
+      server_templates << ServerTemplate.new(template["nickname"],template["description"],template["href"],template["updated_at"])
+    end
+    server_templates
   end
   def right_scripts
     login() if self.session.nil?
