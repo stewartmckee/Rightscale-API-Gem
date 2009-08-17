@@ -1,0 +1,7 @@
+
+# Configuration file for the RightScale API
+
+credentials:
+  id: <rightscale_account_id>
+  email: <user email>
+  password: <user password>
