@@ -22,9 +22,7 @@ describe RightScaleApi do
   it "should get list of deployments" do
     @api.deployments.should_not be_nil
   end
-  it "should get list of statuses" do
-    @api.statuses.should_not be_nil
-  end
+  it "should get list of statuses"
   it "should get list of alert_specs" do
     @api.alert_specs.should_not be_nil
   end
@@ -38,14 +36,13 @@ describe RightScaleApi do
     @api.ec2_elastic_ips.should_not be_nil
   end
   it "should get list of ec2_security_groups" do
-    @api.ec2_security_groups.should_not be_nil
+    groups = @api.ec2_security_groups
+    groups.should_not be_nil
+    groups.each do |group|
+      group.aws_group_name.should_not be_nil
+    end
   end
-  it "should get list of ec2_ssh_keys" do
-    @api.ec2_ssh_keys.should_not be_nil
-  end
-  it "should get list of server_arrays" do
-    @api.server_arrays.should_not be_nil
-  end
+  it "should get list of server_arrays"
   it "should get list of server_templates" do
     @api.server_templates.should_not be_nil
   end

@@ -4,14 +4,22 @@ require 'json'
 require 'xml'
 require 'yaml'
 
+require File.dirname(__FILE__) + '/deployment.rb'
+require File.dirname(__FILE__) + '/server.rb'
+require File.dirname(__FILE__) + '/server_template.rb'
+require File.dirname(__FILE__) + '/ec2_security_group.rb'
+
 class RightScaleApi
   RestClient.log = "tmp/restclient.log"
   attr_accessor :session, :id
 
+  def initialize()
+    @config = YAML.load(File.open(File.dirname(__FILE__) + '/../config.yml'))
+    self.id = @config["credentials"]["id"]
+  end
+
   def login()
-    config = YAML.load(File.open(File.dirname(__FILE__) + '/../config.yml'))
-    self.id = config["credentials"]["id"]
-    auth = "#{config["credentials"]["email"]}:#{config["credentials"]["password"]}"
+    auth = "#{@config["credentials"]["email"]}:#{@config["credentials"]["password"]}"
     auth =  Base64.encode64(auth)
     response = RestClient.head(get_url("login"), {"X-API-VERSION" => "1.0", :Authorization => "Basic #{auth}"})
     self.session = response.headers[:set_cookie]
@@ -19,13 +27,22 @@ class RightScaleApi
   end
 
   def deployments
-    get("deployments.js")
+    deployments = []
+    get("deployments.js").each do |d|
+      deployments << Deployment.new(d["nickname"], d["description"], d["href"], d["created_at"], d["updated_at"])
+    end
+    deployments
   end
   def servers
-    get("servers.js")
+    servers = []
+    get("servers.js").each do |s|
+      puts "--- #{s}"
+      #servers << Server.new()
+    end
+    servers
   end
   def statuses
-    get("statuses.js")
+    #get("statuses.js")
   end
   def alert_specs
     get("deployments.js")
@@ -37,16 +54,17 @@ class RightScaleApi
     get("ec2_ebs_snapshots.js")
   end
   def ec2_elastic_ips
-    get("deployments.js")
+    get("ec2_elastic_ips.js")
   end
   def ec2_security_groups
-    get("ec2_security_groups.js")
-  end
-  def ec2_ssh_keys
-    get("ec2_ssh_keys.js")
+    ec2_security_groups = []
+    get("ec2_security_groups.js").each do |group|
+      ec2_security_groups << EC2SecurityGroup.new(group["aws_description"], group["aws_group_name"], group["aws_perms"])
+    end
+    ec2_security_groups
   end
   def server_arrays
-    get("server_arrays.js")
+    #get("server_arrays.js")
   end
   def server_templates
     server_templates = []
@@ -89,7 +107,7 @@ class RightScaleApi
 
   def get(action, headers={})
     login() if self.session.nil?
-    puts "Calling #{get_url(action)}"
+    #puts "Calling #{get_url(action)}"
     JSON.parse(RestClient.get(get_url(action), headers.merge(default_headers)))
   end
 
@@ -105,7 +123,7 @@ class RightScaleApi
 
   def delete(action, headers={})
     login() if self.session.nil?
-    puts "Calling DELETE on #{get_url(action)}"
+    #puts "Calling DELETE on #{get_url(action)}"
     RestClient.delete(get_url(action), headers.merge(default_headers))
   end
 

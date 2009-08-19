@@ -3,20 +3,25 @@ require 'rest_client'
 require 'json'
 
 class Deployment
-  attr_accessor :created_at, :description, :updated_at, :nickname, :href, :servers, :parameters
+  attr_accessor :created_at, :description, :updated_at, :name, :href, :servers, :parameters
   
-  def self.create(nickname, description)
-    deployment = Deployment.new
+  def initialize(name, description, href, created_at, updated_at)
+    self.name = name
+    self.description = description
+    self.href = href
+    self.updated_at = updated_at
+    self.created_at = created_at
+  end
+
+  def self.create(name, description)
+    deployment = Deployment.new(name, description, nil, nil, nil)
     api = RightScaleApi.new
-    response = api.post("deployments", {"deployment[nickname]" => nickname, "deployment[description]" => description})
-    deployment.nickname = nickname
-    deployment.description = description
+    response = api.post("deployments", {"deployment[nickname]" => name, "deployment[description]" => description})
     deployment.href = response.headers[:location]
     deployment
   end
   def self.from_href(href)
-    deployment = Deployment.new
-    deployment.href = href
+    deployment = Deployment.new(nil, nil, href, nil, nil)
     deployment.update
     deployment
   end
@@ -25,12 +30,12 @@ class Deployment
     attribs = api.get(self.href + ".js")
     self.created_at = attribs["created-at"]
     self.description = attribs["description"]
-    self.nickname = attribs["nickname"]
+    self.name = attribs["nickname"]
     self.updated_at = attribs["updated-at"]
   end
   def save
     api = RightScaleApi.new
-    api.put(self.href, {"deployment[nickname]" => self.nickname, "deployment[description]" => self.description})
+    api.put(self.href, {"deployment[nickname]" => self.name, "deployment[description]" => self.description})
     #"deployment[parameters]" => parameters}
   end
   def delete

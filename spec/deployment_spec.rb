@@ -7,22 +7,29 @@ describe Deployment do
 
   it "should create, modify and delete a deployment" do
 
-    original_nickname = "test deployment through api"
+    original_name = "test deployment through api"
 
-    d = Deployment.create(original_nickname, "This is a test deployment that has been created through the api")
+    d = Deployment.create(original_name, "This is a test deployment that has been created through the api")
 
-    d.nickname.should == original_nickname
-    d.nickname += "CHANGED"
-    d.nickname.should == original_nickname + "CHANGED"
+    d.name.should == original_name
+    d.name += "CHANGED"
+    d.name.should == original_name + "CHANGED"
     d.save
-    d.nickname.should == original_nickname + "CHANGED"
-    d.nickname += "CHANGED AGAIN"
-    d.nickname.should == original_nickname + "CHANGEDCHANGED AGAIN"
+    d.name.should == original_name + "CHANGED"
+    d.name += "CHANGED AGAIN"
+    d.name.should == original_name + "CHANGEDCHANGED AGAIN"
     d.update
-    d.nickname.should == original_nickname + "CHANGED"
+    d.name.should == original_name + "CHANGED"
 
     d.delete
 
+  end
+
+  it "should get list of deployments from api" do
+    api = RightScaleApi.new
+    api.deployments.each do |deployment|
+      puts deployment.name
+    end
   end
 end
 

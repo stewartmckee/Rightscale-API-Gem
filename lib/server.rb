@@ -4,7 +4,11 @@
 class Server
   attr_accessor :created_at, :updated_at, :name, :href, :state, :server_type, :server_template, :ec2_ssh_key, :ec2_security_groups, :deployment, :aki_image, :ari_image, :ec2_image, :instance_type
 
-  def create(name, server_template, ec2_ssh_key, ec2_security_group, deployment, aki_image, ari_image, ec2_image, instance_type)
+  def initialize
+    
+  end
+
+  def self.create(name, server_template, ec2_ssh_key, ec2_security_group, deployment, aki_image, ari_image, ec2_image, instance_type)
     server = Server.new
     api = RightScaleApi.new
     response = api.post("servers", {"server[nickname]" => self.name,
@@ -17,7 +21,7 @@ class Server
                                     "server[ec2_image_href]" => ec2_image.href,
                                     "server[instance_type]" => instance_type})
 
-
+    puts response
     server.name = name
     server.server_template = server_template
     server.ec2_ssh_key = ec2_ssh_key

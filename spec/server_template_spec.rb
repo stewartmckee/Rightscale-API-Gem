@@ -8,7 +8,12 @@ describe ServerTemplate do
   end
 
   it "should return a list of available server templates" do
-    @api.server_templates.length.should be > 0
+    templates = @api.server_templates
+    templates.length.should be > 0
+    templates.each do |template|
+      template.name.should_not be_nil
+      puts template.name
+    end
   end
 end
 
