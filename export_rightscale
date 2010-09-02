@@ -1,0 +1,39 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'ap'
+require 'lib/right_scale_api.rb'
+
+puts "Creating API..."
+rs = RightScaleApi.new
+puts "Logging in..."
+session = rs.login
+puts "Logged in."
+
+servers = {}
+
+rs.deployments.each do |deployment|
+  puts "==========================================="
+  puts "Deployment: #{deployment.name}"
+  puts "==========================================="
+  
+  deployment.servers.each do |server|
+    puts "Server: #{server.name} (#{server.template.name})"
+    puts "-------------------------------------------"
+    executables = server.template.executables.group_by{|e| e.apply}
+    executables.each do |group, execs|
+      puts "\n=== #{group.upcase} ==="
+      execs.each do |executable|
+        puts executable.right_script.name
+      end
+    end
+  end
+end
+
+#puts "Writing Export"
+#File.open("export.yaml", "w") do |f|
+#  f.write(servers.to_yaml)
+#end
+#
+#puts "Successfully Exported." if YAML.load_file("export.yaml")
+

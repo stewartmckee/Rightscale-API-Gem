@@ -1,6 +1,3 @@
-# To change this template, choose Tools | Templates
-# and open the template in the editor.
-
 class ServerTemplate
   attr_accessor :updated_at, :name, :description, :href, :aki_image, :ari_image, :ec2_image, :instance_type, :ec2_user_data
   
@@ -9,6 +6,15 @@ class ServerTemplate
     self.description = description
     self.href = href
     self.updated_at = updated_at
+  end
+  
+  def executables
+    @rightscale_api = RightScaleApi.new if @rightscale_api.nil?
+    scripts = []
+    @rightscale_api.get("#{self.href}/executables.js").each do |e|
+      scripts << Executable.new(e["position"], e["apply"], e["recipe"], e["right_script"]["href"])
+    end
+    scripts.sort{|a,b| a.position <=> b.position}
   end
 
   def create(name, description, aki_image, ari_image, ec2_image, instance_type, ec2_user_data)

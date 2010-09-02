@@ -4,6 +4,14 @@
 class RightScript
   attr_accessor :name, :description, :href, :script, :updated_at, :created_at, :version, :inputs
   
+  def initialize(name, description, script, created_at, updated_at)
+    self.name = name
+    self.description = description
+    self.script = script
+    self.created_at = created_at
+    self.updated_at = updated_at
+  end  
+  
   def create(name, description, script, inputs, version)
     right_script = RightScript.new
     api = RightScaleApi.new

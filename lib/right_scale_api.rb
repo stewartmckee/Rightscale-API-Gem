@@ -3,41 +3,45 @@ require 'base64'
 require 'json'
 require 'xml'
 require 'yaml'
+require 'digest/md5'
+
 
 require File.dirname(__FILE__) + '/deployment.rb'
 require File.dirname(__FILE__) + '/server.rb'
 require File.dirname(__FILE__) + '/server_template.rb'
 require File.dirname(__FILE__) + '/ec2_security_group.rb'
+require File.dirname(__FILE__) + '/executable.rb'
+require File.dirname(__FILE__) + '/right_script.rb'
 
 class RightScaleApi
   RestClient.log = "tmp/restclient.log"
-  attr_accessor :session, :id
-
+  
+  @@session = nil
+  
   def initialize()
     @config = YAML.load(File.open(File.dirname(__FILE__) + '/../config.yml'))
-    self.id = @config["credentials"]["id"]
+    @@id = @config["credentials"]["id"]
   end
 
   def login()
     auth = "#{@config["credentials"]["email"]}:#{@config["credentials"]["password"]}"
     auth =  Base64.encode64(auth)
     response = RestClient.head(get_url("login"), {"X-API-VERSION" => "1.0", :Authorization => "Basic #{auth}"})
-    self.session = response.headers[:set_cookie]
-    self.session
+    @@session = response.headers[:set_cookie]
+    @@session
   end
 
   def deployments
     deployments = []
     get("deployments.js").each do |d|
-      deployments << Deployment.new(d["nickname"], d["description"], d["href"], d["created_at"], d["updated_at"])
+      deployments << Deployment.new(d["nickname"], d["description"], d["href"], d["created_at"], d["updated_at"], d["servers"])
     end
     deployments
   end
   def servers
     servers = []
-    get("servers.js").each do |s|
-      puts "--- #{s}"
-      #servers << Server.new()
+    get("servers.js").each do |server|
+      servers << Server.new(server["server_template_href"],server["href"],server["server_type"],server["created_at"],server["nickname"],server["updated_at"],server["tags"],server["deployment_href"],server["current_instance_href"],server["state"])
     end
     servers
   end
@@ -74,17 +78,13 @@ class RightScaleApi
     server_templates
   end
   def right_scripts
-    login() if self.session.nil?
-    xml = RestClient.get(get_url("right_scripts.xml"), {"X-API-VERSION" => "1.0", :cookie => self.session})
+    login() if @@session.nil?
+    xml = RestClient.get(get_url("right_scripts.xml"), {"X-API-VERSION" => "1.0", :cookie => @@session})
     parser = XML::Parser.string(xml)
     doc = parser.parse
     scripts = []
     doc.find('//right-script').each do |s|
-      scripts << {"name" => s.find("name").first.content,
-                "description" => s.find("description").first.content,
-                "script" => s.find("script").first.content,
-                "created-at" => s.find("created-at").first.content,
-                "updated-at" => s.find("updated-at").first.content}
+      scripts << RightScript.new(s.find("name").first.content,s.find("description").first.content,s.find("script").first.content,s.find("created-at").first.content,s.find("updated-at").first.content)
     end
     scripts
   end
@@ -92,8 +92,8 @@ class RightScaleApi
     get("macros.js")
   end
   def credentials
-    login() if self.session.nil?
-    xml = RestClient.get(get_url("credentials.xml"), {"X-API-VERSION" => "1.0", :cookie => self.session})
+    login() if @@session.nil?
+    xml = RestClient.get(get_url("credentials.xml"), {"X-API-VERSION" => "1.0", :cookie => @@session})
     parser = XML::Parser.string(xml)
     doc = parser.parse
     creds = []
@@ -104,38 +104,63 @@ class RightScaleApi
     end
     creds
   end
-
+  
   def get(action, headers={})
-    login() if self.session.nil?
-    #puts "Calling #{get_url(action)}"
-    JSON.parse(RestClient.get(get_url(action), headers.merge(default_headers)))
+    login() if @@session.nil?
+
+    url = get_url(action)
+    cached_file = "cache/#{Digest::MD5.hexdigest(url)}"
+    
+    response = nil
+    if File.exist?(cached_file)
+      response = File.open(cached_file).readlines.join
+    else
+      response = RestClient.get(url, headers.merge(default_headers))
+      write(cached_file, response)
+    end
+    
+    result = nil
+    if response.start_with?("<?xml")
+      parser = XML::Parser.string(response)
+      result = parser.parse
+    else
+      result = JSON.parse(response)
+    end
+    return {} if result.nil?
+    result
   end
 
   def post(action, payload, headers={})
-    login() if self.session.nil?
+    login() if @@session.nil?
     RestClient.post(get_url(action), payload, headers.merge(default_headers))
   end
 
   def put(action, payload, headers={})
-    login() if self.session.nil?
+    login() if @@session.nil?
     RestClient.put(get_url(action), payload, headers.merge(default_headers))
   end
 
   def delete(action, headers={})
-    login() if self.session.nil?
+    login() if @@session.nil?
     #puts "Calling DELETE on #{get_url(action)}"
     RestClient.delete(get_url(action), headers.merge(default_headers))
   end
 
   def default_headers
-    {"X-API-VERSION" => "1.0", :cookie => session}
+    {"X-API-VERSION" => "1.0", :cookie => @@session}
   end
 
   def get_url(action)
     if action[0..3] == "http"
       action
     else
-      "https://my.rightscale.com/api/acct/#{self.id}/#{action}"
+      "https://my.rightscale.com/api/acct/#{@@id}/#{action}"
+    end
+  end
+  
+  def write(filename, data)
+    File.open(filename, "w") do |f|
+      f.write(data)
     end
   end
 end

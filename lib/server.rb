@@ -2,10 +2,39 @@
 # and open the template in the editor.
 
 class Server
-  attr_accessor :created_at, :updated_at, :name, :href, :state, :server_type, :server_template, :ec2_ssh_key, :ec2_security_groups, :deployment, :aki_image, :ari_image, :ec2_image, :instance_type
+  attr_accessor :created_at, :updated_at, :name, :href, :state, :server_type, :server_template, :ec2_ssh_key, :ec2_security_groups, :aki_image, :ari_image, :ec2_image, :instance_type
 
-  def initialize
-    
+  @rightscale_api = nil
+
+  def initialize(server_template_href,href,server_type,created_at,nickname,updated_at,tags,deployment_href,current_instance_href,state)
+    self.href = href
+    self.server_type = server_type
+    self.created_at = created_at
+    self.name = nickname
+    self.updated_at = updated_at
+    self.state = state
+
+    @deployment_href = deployment_href 
+    @server_template_href = server_template_href
+    @current_instance_href = current_instance_href
+  end
+  
+  def deployment
+    @rightscale_api = RightScaleApi.new if @rightscale_api.nil?
+    d = @rightscale_api.get("#{@deployment_href}.js")
+    Deployment.new(d["nickname"], d["description"], d["href"], d["created_at"], d["updated_at"], d["servers"])
+  end
+  
+  def template
+    @rightscale_api = RightScaleApi.new if @rightscale_api.nil?
+    template = @rightscale_api.get("#{@server_template_href}.js")
+    ServerTemplate.new(template["nickname"],template["description"],template["href"],template["updated_at"])
+  end  
+  def instance
+    @rightscale_api = RightScaleApi.new if @rightscale_api.nil?
+    instance = @rightscale_api.get("#{@current_instance_href}.js")
+    ap instance
+    #Deployment.new(d["nickname"], d["description"], d["href"], d["created_at"], d["updated_at"])  
   end
 
   def self.create(name, server_template, ec2_ssh_key, ec2_security_group, deployment, aki_image, ari_image, ec2_image, instance_type)
@@ -21,7 +50,6 @@ class Server
                                     "server[ec2_image_href]" => ec2_image.href,
                                     "server[instance_type]" => instance_type})
 
-    puts response
     server.name = name
     server.server_template = server_template
     server.ec2_ssh_key = ec2_ssh_key
